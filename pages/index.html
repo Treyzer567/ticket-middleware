@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <title>RollCall</title>
+    <link rel="stylesheet" href="assets/index.css">
+    <style>
+        /* Admin Section Styles */
+        .admin-section {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(255, 142, 83, 0.1) 100%);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 0.5rem;
+        }
+        
+        .admin-section > label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .admin-badge {
+            background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.2rem 0.5rem;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .admin-hint {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 0.75rem;
+        }
+        
+        .admin-services-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+        
+        .admin-service-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            gap: 0.25rem;
+        }
+        
+        .admin-service-btn:hover:not(.disabled) {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .admin-service-btn.selected {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+            border-color: #6366f1;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+        
+        .admin-service-btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        .admin-service-btn .service-icon {
+            font-size: 1.5rem;
+        }
+        
+        .admin-service-btn .service-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: white;
+        }
+        
+        .admin-service-btn .service-desc {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Force bulk toggle to always be side-by-side */
+        .bulk-toggle .bulk-toggle-content {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            flex-wrap: nowrap !important;
+            gap: 1rem !important;
+        }
+        
+        .bulk-toggle .bulk-toggle-text {
+            flex: 1 !important;
+            min-width: 0 !important;
+        }
+        
+        .bulk-toggle .toggle-switch {
+            flex-shrink: 0 !important;
+            flex-grow: 0 !important;
+            width: 50px !important;
+            min-width: 50px !important;
+            max-width: 50px !important;
+        }
+        
+        @media (max-width: 400px) {
+            .admin-services-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            /* Ensure text doesn't push toggle down */
+            .bulk-toggle .bulk-toggle-text strong,
+            .bulk-toggle .bulk-toggle-text span {
+                display: block;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            
+            .bulk-toggle .bulk-toggle-text span {
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-blob bg-blob-1"></div>
+    <div class="bg-blob bg-blob-2"></div>
+
+    <div id="loader" class="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loader-error" class="error-text"></div>
+    </div>
+
+    <div id="gate-card" class="card">
+        <div class="card-header">
+            <div class="lock-icon">🔒</div>
+            <h2>Private Access</h2>
+            <p id="hint-text">Waiting for connection...</p>
+        </div>
+        <div class="form-group">
+            <input type="password" id="site-pass" placeholder="Enter Site Password">
+        </div>
+        <button onclick="checkGate()">Access Portal</button>
+        <div id="gate-msg" class="msg-box"></div>
+    </div>
+
+    <div id="setup-card" class="card">
+        <div class="card-header">
+            <div class="header-main">
+                <img src="assets/logo.png" alt="" class="header-logo">
+                <h2 class="main-title">RollCall</h2>
+            </div>
+            <p>Create accounts for yourself or others across all services</p>
+        </div>
+        <div class="form-group">
+            <label>Username</label>
+            <span id="bulk-hint" class="field-hint" style="display: none; margin-bottom: 0.5rem;">Separate usernames with commas (max 32 at a time)</span>
+            <input type="text" id="user" placeholder="Choose a username" autocomplete="off">
+        </div>
+        <div class="form-group">
+            <label>Email Address</label>
+            <div class="email-input-wrapper" id="email-wrapper">
+                <input type="text" id="email_prefix" placeholder="username">
+                <div class="email-divider"></div>
+                <span class="email-suffix" id="email-domain-suffix">@yourdomain.com</span>
+            </div>
+            <span id="bulk-email-note" class="field-hint" style="display: none;">Email will match each username automatically</span>
+        </div>
+        <div class="form-group" id="password-group">
+            <label>Password <span id="password-optional" style="display: none;">(Optional for updates)</span></label>
+            <input type="password" id="pass" placeholder="Minimum 8 characters" minlength="8">
+            <span class="field-hint" id="password-hint">Must be at least 8 characters</span>
+        </div>
+        <div class="form-group bulk-toggle">
+            <div class="bulk-toggle-content">
+                <div class="bulk-toggle-text">
+                    <strong>Bulk Mode</strong>
+                    <span>Enable to add multiple users at once</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="bulk-checkbox" onchange="toggleBulkMode()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="form-group mode-toggle">
+            <div class="mode-toggle-content">
+                <label class="mode-option">
+                    <input type="radio" name="mode" value="create" checked onchange="toggleMode()">
+                    <span class="mode-label">Create</span>
+                </label>
+                <label class="mode-option">
+                    <input type="radio" name="mode" value="update" onchange="toggleMode()">
+                    <span class="mode-label">Update</span>
+                </label>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Services</label>
+            <div class="custom-dropdown" id="service-dropdown" onclick="toggleDropdown(event)">
+                <span id="dropdown-label">All Services Selected</span>
+                <span class="arrow"></span>
+                <div id="dropdown-items" class="dropdown-content">
+                    <label class="dropdown-option" onclick="event.stopPropagation()"><input type="checkbox" value="jellyfin" checked onchange="updateLabel()"><span>Jellyfin (Media)</span></label>
+                    <label class="dropdown-option" onclick="event.stopPropagation()"><input type="checkbox" value="romm" checked onchange="updateLabel()"><span>Romm (Games)</span></label>
+                    <label class="dropdown-option" onclick="event.stopPropagation()"><input type="checkbox" value="booklore" checked onchange="updateLabel()"><span>Booklore (Books)</span></label>
+                    <label class="dropdown-option" onclick="event.stopPropagation()"><input type="checkbox" value="synapse" checked onchange="updateLabel()"><span>Synapse (Chat)</span></label>
+                </div>
+            </div>
+        </div>
+        <div id="admin-section" class="form-group admin-section" style="display: none;">
+            <label>Admin Services <span class="admin-badge">Local Only</span></label>
+            <p class="admin-hint">These services require local network access for registration</p>
+            <div class="admin-services-grid">
+                <button type="button" class="admin-service-btn" id="filebrowser-btn" onclick="toggleAdminService('filebrowser')">
+                    <span class="service-icon">📁</span>
+                    <span class="service-name">Filebrowser</span>
+                    <span class="service-desc">File Management</span>
+                </button>
+                <button type="button" class="admin-service-btn" id="immich-btn" onclick="toggleAdminService('immich')">
+                    <span class="service-icon">📷</span>
+                    <span class="service-name">Immich</span>
+                    <span class="service-desc">Photo Library</span>
+                </button>
+            </div>
+            <input type="hidden" id="admin-services-input" value="">
+        </div>
+        <button onclick="signup()" id="submit-btn">Register Account</button>
+        <div id="msg" class="msg-box"></div>
+    </div>
+
+    <div id="success-card" class="card success-card">
+        <div class="card-header">
+            <div class="big-check-wrapper">
+                <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                    <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
+                    <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                </svg>
+            </div>
+            <h2>Process Complete</h2>
+        </div>
+        <div id="results-container" class="results-container"></div>
+        <div class="wiki-section">
+            <div class="wiki-content">
+                <strong>Documentation & Clients</strong>
+                <p>Visit the wiki for app setup guides or return home.</p>
+                <div class="wiki-buttons">
+                    <a id="wiki-link" href="#" target="_blank" class="wiki-btn">Launch Wiki</a>
+                    <a id="home-link" href="/" class="wiki-btn home-btn">Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const hostname = window.location.hostname;
+        const isLocal = hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.');
+        // BACKEND_URL falls back to same-host port 8122 if config doesn't specify
+        const BACKEND_URL = isLocal ? `http://${hostname}:8122` : (window.BACKEND_EXTERNAL_URL || `https://${hostname}`);
+        const MAX_BULK_USERS = 32;
+        const BULK_DELAY_MS = 1500; // Delay between bulk requests to prevent rate limiting
+        let config = {};
+        let bulkMode = false;
+        let updateMode = false;
+        let selectedAdminServices = [];
+        let emailDomain = 'yourdomain.com'; // Will be set from config
+
+        // Admin service toggle function
+        function toggleAdminService(service) {
+            const btn = document.getElementById(`${service}-btn`);
+            const index = selectedAdminServices.indexOf(service);
+            
+            if (index > -1) {
+                selectedAdminServices.splice(index, 1);
+                btn.classList.remove('selected');
+            } else {
+                selectedAdminServices.push(service);
+                btn.classList.add('selected');
+            }
+            
+            document.getElementById('admin-services-input').value = selectedAdminServices.join(',');
+            saveState();
+        }
+
+        // Show admin section for local users
+        function showAdminSection() {
+            const adminSection = document.getElementById('admin-section');
+            if (adminSection) {
+                adminSection.style.display = 'block';
+            }
+        }
+
+        // Load saved state from localStorage
+        function loadSavedState() {
+            const saved = localStorage.getItem('rollcall_state');
+            if (saved) {
+                try {
+                    const state = JSON.parse(saved);
+                    if (state.bulkMode !== undefined) {
+                        document.getElementById('bulk-checkbox').checked = state.bulkMode;
+                        toggleBulkMode();
+                    }
+                    if (state.updateMode !== undefined) {
+                        document.querySelector(`input[name="mode"][value="${state.updateMode ? 'update' : 'create'}"]`).checked = true;
+                        toggleMode();
+                    }
+                    if (state.services) {
+                        document.querySelectorAll('#dropdown-items input').forEach(input => {
+                            input.checked = state.services.includes(input.value);
+                        });
+                        updateLabel();
+                    }
+                    if (state.adminServices && config.is_local) {
+                        state.adminServices.forEach(service => {
+                            if (service !== 'immich') { // Skip disabled services
+                                selectedAdminServices.push(service);
+                                const btn = document.getElementById(`${service}-btn`);
+                                if (btn) btn.classList.add('selected');
+                            }
+                        });
+                    }
+                    if (state.username) document.getElementById('user').value = state.username;
+                    if (state.emailPrefix) document.getElementById('email_prefix').value = state.emailPrefix;
+                } catch (e) {
+                    console.error('Failed to load saved state:', e);
+                }
+            }
+        }
+
+        // Save current state to localStorage
+        function saveState() {
+            const state = {
+                bulkMode: document.getElementById('bulk-checkbox').checked,
+                updateMode: document.querySelector('input[name="mode"]:checked').value === 'update',
+                services: Array.from(document.querySelectorAll('#dropdown-items input:checked')).map(i => i.value),
+                adminServices: selectedAdminServices.slice(),
+                username: document.getElementById('user').value,
+                emailPrefix: document.getElementById('email_prefix').value
+            };
+            localStorage.setItem('rollcall_state', JSON.stringify(state));
+        }
+
+        // Add event listeners for saving state
+        function setupStateSaving() {
+            document.getElementById('user').addEventListener('input', saveState);
+            document.getElementById('email_prefix').addEventListener('input', saveState);
+            document.getElementById('bulk-checkbox').addEventListener('change', saveState);
+            document.querySelectorAll('input[name="mode"]').forEach(input => input.addEventListener('change', saveState));
+            document.querySelectorAll('#dropdown-items input').forEach(input => input.addEventListener('change', saveState));
+        }
+
+        window.onload = async () => {
+            try {
+                const res = await fetch(`${BACKEND_URL}/config`);
+                config = await res.json();
+                document.getElementById('hint-text').innerText = `Hint: ${config.hint}`;
+                document.getElementById('wiki-link').href = config.wiki_url;
+                document.getElementById('home-link').href = config.home_url || '/';
+                // Set email domain from backend config
+                if (config.email_domain) {
+                    emailDomain = config.email_domain;
+                    document.getElementById('email-domain-suffix').innerText = `@${emailDomain}`;
+                }
+                if (config.is_local) {
+                    switchCard(null, 'setup-card');
+                    showAdminSection();
+                } else {
+                    switchCard(null, 'gate-card');
+                }
+                document.getElementById('loader').style.display = 'none';
+                
+                // Load saved state and setup listeners
+                loadSavedState();
+                setupStateSaving();
+            } catch (e) {
+                document.getElementById('loader-error').innerText = "Backend Connection Failed";
+            }
+        };
+
+        async function checkGate() {
+            const pass = document.getElementById('site-pass').value;
+            const res = await fetch(`${BACKEND_URL}/verify`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({password: pass})
+            });
+            if (res.ok) switchCard('gate-card', 'setup-card');
+            else document.getElementById('gate-msg').innerText = "Invalid Password";
+        }
+
+        function toggleDropdown(e) {
+            e.stopPropagation();
+            document.getElementById('service-dropdown').classList.toggle('open');
+            document.getElementById('dropdown-items').classList.toggle('show');
+        }
+
+        function updateLabel() {
+            const count = document.querySelectorAll('#dropdown-items input:checked').length;
+            document.getElementById('dropdown-label').innerText = `${count} Services Selected`;
+        }
+
+        function toggleMode() {
+            updateMode = document.querySelector('input[name="mode"]:checked').value === 'update';
+            const passInput = document.getElementById('pass');
+            const passOptional = document.getElementById('password-optional');
+            const passHint = document.getElementById('password-hint');
+            
+            if (updateMode) {
+                passOptional.style.display = 'inline';
+                passHint.innerText = 'Leave blank to keep existing password';
+                passInput.removeAttribute('minlength');
+                passInput.placeholder = 'Leave blank to keep current';
+            } else {
+                passOptional.style.display = 'none';
+                passHint.innerText = 'Must be at least 8 characters';
+                passInput.setAttribute('minlength', '8');
+                passInput.placeholder = 'Minimum 8 characters';
+            }
+        }
+
+        function toggleBulkMode() {
+            bulkMode = document.getElementById('bulk-checkbox').checked;
+            const emailWrapper = document.getElementById('email-wrapper');
+            const emailInput = document.getElementById('email_prefix');
+            const bulkHint = document.getElementById('bulk-hint');
+            const bulkEmailNote = document.getElementById('bulk-email-note');
+            const userInput = document.getElementById('user');
+            const submitBtn = document.getElementById('submit-btn');
+
+            if (bulkMode) {
+                emailWrapper.classList.add('disabled');
+                emailInput.disabled = true;
+                emailInput.placeholder = 'Auto-generated';
+                bulkHint.style.display = 'block';
+                bulkEmailNote.style.display = 'block';
+                userInput.placeholder = 'e.g. trey, david, karen, john';
+                submitBtn.innerText = 'Register Accounts';
+                userInput.addEventListener('input', checkUserCount);
+            } else {
+                emailWrapper.classList.remove('disabled');
+                emailInput.disabled = false;
+                emailInput.placeholder = 'username';
+                bulkHint.style.display = 'none';
+                bulkEmailNote.style.display = 'none';
+                userInput.placeholder = 'Choose a username';
+                submitBtn.innerText = 'Register Account';
+                userInput.removeEventListener('input', checkUserCount);
+                userInput.classList.remove('input-error');
+                document.getElementById('bulk-hint').classList.remove('error-hint');
+            }
+        }
+
+        function checkUserCount() {
+            const userInput = document.getElementById('user');
+            const bulkHint = document.getElementById('bulk-hint');
+            const count = userInput.value.split(',').filter(u => u.trim().length > 0).length;
+            
+            if (count > MAX_BULK_USERS) {
+                userInput.classList.add('input-error');
+                bulkHint.classList.add('error-hint');
+                bulkHint.innerText = `Too many users! ${count}/${MAX_BULK_USERS} max`;
+            } else {
+                userInput.classList.remove('input-error');
+                bulkHint.classList.remove('error-hint');
+                bulkHint.innerText = 'Separate usernames with commas (max 32 at a time)';
+            }
+        }
+
+        async function registerSingleUser(user, pass, emailPrefix, services, mode) {
+            const maxRetries = 2;
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    const res = await fetch(`${BACKEND_URL}/register`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            username: user, 
+                            password: pass, 
+                            email_prefix: emailPrefix, 
+                            services: services,
+                            mode: mode
+                        })
+                    });
+                    if (res.ok) {
+                        return await res.json();
+                    }
+                } catch (e) {
+                    if (attempt === maxRetries) throw e;
+                }
+                await new Promise(r => setTimeout(r, 500));
+            }
+            throw new Error('Failed after retries');
+        }
+
+        async function signup() {
+            const btn = document.getElementById('submit-btn');
+            const msgBox = document.getElementById('msg');
+            const userInput = document.getElementById('user').value.trim();
+            const pass = document.getElementById('pass').value;
+            const services = Array.from(document.querySelectorAll('#dropdown-items input:checked')).map(i => i.value);
+            const adminServices = selectedAdminServices.slice(); // Copy admin services
+            const allServices = [...services, ...adminServices];
+            const mode = updateMode ? 'update' : 'create';
+
+            msgBox.className = 'msg-box';
+            msgBox.innerText = '';
+
+            if (!userInput) {
+                msgBox.className = 'msg-box error';
+                msgBox.innerText = "Username is required.";
+                return;
+            }
+
+            // Password validation - required for create, optional for update
+            if (!updateMode && !pass) {
+                msgBox.className = 'msg-box error';
+                msgBox.innerText = "Password is required for new accounts.";
+                return;
+            }
+
+            if (!updateMode && pass.length < 8) {
+                msgBox.className = 'msg-box error';
+                msgBox.innerText = "Password must be at least 8 characters.";
+                return;
+            }
+
+            if (allServices.length === 0) {
+                msgBox.className = 'msg-box error';
+                msgBox.innerText = "Please select at least one service.";
+                return;
+            }
+
+            if (bulkMode) {
+                const usernames = userInput.split(',')
+                    .map(u => u.trim().toLowerCase())
+                    .filter(u => u.length > 0);
+
+                if (usernames.length === 0) {
+                    msgBox.className = 'msg-box error';
+                    msgBox.innerText = "Please enter at least one username.";
+                    return;
+                }
+
+                if (usernames.length > MAX_BULK_USERS) {
+                    document.getElementById('user').classList.add('input-error');
+                    msgBox.className = 'msg-box error';
+                    msgBox.innerText = `Maximum ${MAX_BULK_USERS} users at a time. You entered ${usernames.length}.`;
+                    return;
+                }
+
+                btn.innerText = `Processing 0/${usernames.length}...`;
+                btn.disabled = true;
+
+                const allResults = {};
+                let completed = 0;
+
+                for (const username of usernames) {
+                    try {
+                        const data = await registerSingleUser(username, pass, username, allServices, mode);
+                        allResults[username] = data.details;
+                    } catch (e) {
+                        allResults[username] = {};
+                        allServices.forEach(s => allResults[username][s] = {status: false, reason: "Request failed"});
+                    }
+                    completed++;
+                    btn.innerText = `Processing ${completed}/${usernames.length}...`;
+                    
+                    // Add delay between requests to prevent rate limiting
+                    if (completed < usernames.length) {
+                        await new Promise(r => setTimeout(r, BULK_DELAY_MS));
+                    }
+                }
+
+                renderBulkSuccess(allResults);
+            } else {
+                const pre = document.getElementById('email_prefix').value.trim();
+
+                if (!pre) {
+                    msgBox.className = 'msg-box error';
+                    msgBox.innerText = "Email address is required.";
+                    return;
+                }
+
+                btn.innerText = "Processing...";
+                btn.disabled = true;
+
+                try {
+                    const data = await registerSingleUser(userInput, pass, pre, allServices, mode);
+                    renderSuccess(data.details);
+                } catch (e) {
+                    btn.disabled = false;
+                    btn.innerText = bulkMode ? "Register Accounts" : "Register Account";
+                    msgBox.className = 'msg-box error';
+                    msgBox.innerText = "Registration Failed. Please try again.";
+                }
+            }
+        }
+
+        function renderSuccess(details) {
+            const container = document.getElementById('results-container');
+            const items = {
+                jellyfin: { n: 'Jellyfin', d: 'Media', u: config.jellyfin_url },
+                romm: { n: 'Romm', d: 'Games', u: config.romm_url },
+                booklore: { n: 'Booklore', d: 'Books', u: config.booklore_url },
+                synapse: { n: 'Synapse', d: 'Chat', u: config.synapse_url },
+                filebrowser: { n: 'Filebrowser', d: 'Files', u: config.filebrowser_url },
+                immich: { n: 'Immich', d: 'Photos', u: config.immich_url }
+            };
+
+            let html = '<div class="dashboard-grid">';
+            for (const [service, status] of Object.entries(details)) {
+                const info = items[service];
+                if (!info) continue;
+                const isFail = status === false || (typeof status === 'object' && status.status === false);
+                const statusClass = isFail ? 'failed' : 'success';
+                const statusText = isFail ? (status?.reason || 'Failed') : 'Success';
+
+                html += `
+                    <a href="${info.u}" target="_blank" class="dash-tile ${statusClass}">
+                        <strong>${info.n}</strong>
+                        <span>${info.d}</span>
+                        <div class="status-badge">${statusText}</div>
+                    </a>`;
+            }
+            html += '</div>';
+            container.innerHTML = html;
+            switchCard('setup-card', 'success-card');
+        }
+
+        function renderBulkSuccess(allResults) {
+            const container = document.getElementById('results-container');
+            const items = {
+                jellyfin: { n: 'Jellyfin', d: 'Media', u: config.jellyfin_url },
+                romm: { n: 'Romm', d: 'Games', u: config.romm_url },
+                booklore: { n: 'Booklore', d: 'Books', u: config.booklore_url },
+                synapse: { n: 'Synapse', d: 'Chat', u: config.synapse_url },
+                filebrowser: { n: 'Filebrowser', d: 'Files', u: config.filebrowser_url },
+                immich: { n: 'Immich', d: 'Photos', u: config.immich_url }
+            };
+
+            const userCount = Object.keys(allResults).length;
+            let html = `<div class="bulk-results-header"><strong>Bulk Registration Results</strong><span>${userCount} user${userCount !== 1 ? 's' : ''} processed</span></div>`;
+            html += '<div class="bulk-results-grid">';
+            
+            for (const [username, details] of Object.entries(allResults)) {
+                const statuses = Object.values(details).map(s => {
+                    if (s === false || (typeof s === 'object' && s.status === false)) return false;
+                    return true;
+                });
+                const allSuccess = statuses.every(v => v === true);
+                const allFailed = statuses.every(v => v === false);
+                const statusClass = allFailed ? 'failed' : (allSuccess ? 'success' : 'partial');
+                const statusText = allFailed ? 'Failed' : (allSuccess ? 'Success' : 'Partial');
+
+                // Collect failure reasons
+                const failReasons = [];
+                let servicesHtml = Object.entries(details)
+                    .map(([service, status]) => {
+                        const isFail = status === false || (typeof status === 'object' && status.status === false);
+                        const icon = isFail ? '✗' : '✓';
+                        const svcClass = isFail ? 'svc-fail' : 'svc-ok';
+                        const svcUrl = items[service]?.u || '#';
+                        const reason = isFail && status?.reason ? status.reason : '';
+                        if (reason) failReasons.push(`${items[service]?.n}: ${reason}`);
+                        return `<a href="${svcUrl}" target="_blank" class="svc-badge ${svcClass}" title="${items[service]?.n || service}${reason ? ' - ' + reason : ''}">${icon} ${items[service]?.n || service}</a>`;
+                    })
+                    .join('');
+
+                const reasonsHtml = failReasons.length > 0 ? `<div class="bulk-fail-reasons">${failReasons.join(' • ')}</div>` : '';
+
+                html += `
+                    <div class="bulk-user-tile ${statusClass}">
+                        <div class="bulk-user-info">
+                            <strong>${username}</strong>
+                        </div>
+                        <div class="bulk-user-services">${servicesHtml}</div>
+                        <div class="bulk-status-badge">${statusText}</div>
+                        ${reasonsHtml}
+                    </div>`;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+            switchCard('setup-card', 'success-card');
+        }
+
+        function switchCard(from, to) {
+            const t = document.getElementById(to);
+            if (from) {
+                const f = document.getElementById(from);
+                f.classList.remove('active');
+                setTimeout(() => { f.style.display = 'none'; t.style.display = 'block'; t.offsetHeight; t.classList.add('active'); }, 400);
+            } else {
+                t.style.display = 'block'; t.offsetHeight; t.classList.add('active');
+            }
+        }
+
+        window.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('service-dropdown');
+            const content = document.getElementById('dropdown-items');
+            if (!dropdown.contains(e.target)) {
+                content.classList.remove('show');
+                dropdown.classList.remove('open');
+            }
+        });
+    </script>
+</body>
+</html>
