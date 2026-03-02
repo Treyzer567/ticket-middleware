@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # Nginx service to serve the static HTML files (frontend)
+  sign-on-frontend:
+    image: nginx:alpine
+    container_name: sign-on-frontend
+    ports:
+      - "8121:80"
+    restart: unless-stopped
+    networks:
+      - media-net
+    volumes:
+      - /path/to/sign-on-page/pages:/usr/share/nginx/html:ro
+
+  # Flask backend service for the user creation logic
+  sign-on-backend:
+    image: python:3.11-slim
+    container_name: sign-on-backend
+    working_dir: /app
+    ports:
+      - "8122:5000"
+    restart: unless-stopped
+    volumes:
+      - /path/to/sign-on-page/backend:/app
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+             gunicorn --bind 0.0.0.0:5000 app:app"
+    environment:
+      # General
+      SITE_PASSWORD: "changeme"
+      PASS_HINT: "ask the admin"
+      BACKEND_EXTERNAL_URL: "https://backend.yourdomain.com"
+      WIKI_EXTERNAL_URL: "https://wiki.yourdomain.com"
+      HOME_EXTERNAL_URL: "https://home.yourdomain.com"
+      EMAIL_DOMAIN: "yourdomain.com"
+
+      # Jellyfin
+      JELLYFIN_INTERNAL_URL: "http://your-server-ip:8096"
+      JELLYFIN_API_KEY: "your_jellyfin_api_key"
+      JELLYFIN_EXTERNAL_URL: "https://yourdomain.com"
+
+      # RomM
+      ROMM_INTERNAL_URL: "http://your-server-ip:8113"
+      ROMM_ADMIN_USER: "admin"
+      ROMM_ADMIN_PASS: "your_romm_admin_password"
+      ROMM_EXTERNAL_URL: "https://games.yourdomain.com"
+
+      # BookLore
+      BOOKLORE_INTERNAL_URL: "http://your-server-ip:6060"
+      BOOKLORE_ADMIN_USER: "admin"
+      BOOKLORE_ADMIN_PASS: "your_booklore_admin_password"
+      BOOKLORE_EXTERNAL_URL: "https://books.yourdomain.com"
+
+      # Synapse
+      SYNAPSE_INTERNAL_URL: "http://your-server-ip:8129"
+      SYNAPSE_ACCESS_TOKEN: "your_synapse_admin_access_token"
+      SYNAPSE_DOMAIN: "matrix.yourdomain.com"
+      SYNAPSE_EXTERNAL_URL: "https://messaging.yourdomain.com"
+
+      # File Browser Quantum
+      FILEBROWSER_INTERNAL_URL: "http://your-server-ip:8112"
+      FILEBROWSER_EXTERNAL_URL: "https://storage.yourdomain.com"
+      FILEBROWSER_API_KEY: "your_filebrowser_api_key"
+
+      # Immich
+      IMMICH_API_KEY: "your_immich_api_key"
+      IMMICH_INTERNAL_URL: "http://your-server-ip:8138"
+      IMMICH_EXTERNAL_URL: "https://photos.yourdomain.com"
+    networks:
+      - media-net
+
+networks:
+  media-net:
+    external: true
