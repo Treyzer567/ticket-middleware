@@ -100,3 +100,16 @@ Can be deployed standalone via `docker-compose.yml` in this repo, or as part of 
 |------|-------------|
 | [landing-page](https://github.com/Treyzer567/landing-page) | Frontend hub — links to RollCall from the home page |
 | [themes](https://github.com/Treyzer567/themes) | Custom themes for Jellyfin, Homarr, and other services |
+
+---
+
+## External Projects
+
+| Project | Description |
+|---------|-------------|
+| [Jellyfin](https://github.com/jellyfin/jellyfin) | Open source media server |
+| [RomM](https://github.com/rommapp/romm) | Self-hosted ROM manager |
+| [Booklore](https://github.com/booklore-app/booklore) | Self-hosted digital library |
+| [Synapse](https://github.com/element-hq/synapse) | Matrix homeserver |
+| [Filebrowser Quantum](https://github.com/gtsteffaniak/filebrowser) | Self-hosted web file manager |
+| [Immich](https://github.com/immich-app/immich) | Self-hosted photo library |
